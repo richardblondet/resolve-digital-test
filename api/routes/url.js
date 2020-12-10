@@ -1,13 +1,11 @@
 "use strict";
 
 const pjson = require("../package");
-const shorturl = require('shorturl');
 const got = require('got');
 const { JSDOM } = require('jsdom');
 
 const { encode } = require('../services/shortener');
 const UrlModel = require("../models/url");
-const { response } = require("express");
 
 const alive = {
   "alive": true,
@@ -17,20 +15,24 @@ const alive = {
 
 module.exports = function (app) {
   app.get("/url", async (req, res) => {
-    let response = {};
+    try {
+      let response = {};
 
-    // get 100 records and sort them DESC 
-    const collection = await UrlModel.find({}, null, { 
-      sort: { 'timesAccessed': -1 },
-      limit: 100 
-    });
+      // get 100 records and sort them DESC by timesAccessed
+      const collection = await UrlModel.find({}, null, { 
+        sort: { 'timesAccessed': -1 },
+        limit: 100 
+      });
 
-    // format response
-    response.status = 'success';
-    response.data = collection;
+      // format response
+      response.status = 'success';
+      response.data = collection;
 
-    // return to user
-    return await res.status(200).send(response);
+      // return to user
+      return await res.status(200).send(response);
+    } catch (error) {
+      console.log(error);
+    }
   });
 
   app.post("/url", async (req, res) => {
@@ -65,24 +67,28 @@ module.exports = function (app) {
   });
 
   app.get("/l/:code", async (req, res) => {
-    // get in the collection the url by the code
-    const { code } = req.params;
-    
-    // get the url from the result 
-    const urlRecord = await UrlModel.findOne({ code });
-    const { url, timesAccessed = 0 } = urlRecord;
+    try {
+      // get in the collection the url by the code
+      const { code } = req.params;
+      
+      // get the url from the result 
+      const urlRecord = await UrlModel.findOne({ code });
+      const { url, timesAccessed = 0 } = urlRecord;
 
-    // console.log('url', url);
+      // console.log('url', url);
 
-    // Increment counter of access times
-    urlRecord.timesAccessed = timesAccessed + 1;
-    await urlRecord.save();
-    
-    // redirect to the found url
-    res.redirect(url);
+      // Increment counter of access times
+      urlRecord.timesAccessed = timesAccessed + 1;
+      await urlRecord.save();
+      
+      // redirect to the found url
+      await res.redirect(url);
+    } catch (error) {
+      console.log(error);
+    }
   });
 
-  app.get("/health", async (req, res) => {
+  app.get("/url/health", async (req, res) => {
     await res.status(200).send(alive);
   });
   
